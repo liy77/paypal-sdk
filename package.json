@@ -1,0 +1,20 @@
+{
+  "name": "paypal2",
+  "description": "API Wrapper to interact with PayPal API v2",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "undici": "^5.22.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5",
+    "dotenv": "^16.3.1",
+    "typescript": "^5.1.6"
+  },
+  "author": "liy <liysk9@protonmail.com>",
+  "keywords": [
+    "paypal",
+    "api",
+    "typescript",
+    "undici"
+  ]
+}

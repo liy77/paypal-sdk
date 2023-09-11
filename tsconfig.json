@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "NodeNext",
+        "alwaysStrict": true,
+        "strictNullChecks": true,
+        "outDir": "./dist",
+        "declaration": true
+    },
+}
