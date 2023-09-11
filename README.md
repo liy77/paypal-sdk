@@ -1,7 +1,7 @@
-<p align="left" style="display: flex; align-items: center;">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal Logo" width="35" height="35">
-  <span style="font-size: 30px;"> PayPal 2</span>
-</p>
+<h1 align="left" style="display: flex; align-items: center;">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b7/PayPal_Logo_Icon_2014.svg" alt="PayPal Logo" width="30" height="30">
+  PayPal 2
+</h1>
 
 ## Installation
 
