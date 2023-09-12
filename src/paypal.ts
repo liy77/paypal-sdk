@@ -1,5 +1,6 @@
-import { fetch } from "undici";
+import { RequestInit, fetch, setGlobalOrigin } from "undici";
 import * as Constants from "./constants";
+import { Endpoints } from "./constants";
 import PayPalError from "./error";
 import { PayPalOptions } from "./interfaces";
 import { PayPalOrders } from "./orders";
@@ -28,7 +29,6 @@ export function getModeURL(mode: Constants.Mode, useV1 = false) {
 
 export class PayPalClient {
   [PAYPAL_PRIVATE]: PayPalPrivate;
-  defaultCurrency: string;
   orders: PayPalOrders;
   baseUrl:
     | typeof Constants.PAYPAL_SANDBOX_URL
@@ -69,9 +69,10 @@ export class PayPalClient {
       token: null,
     };
 
-    this.defaultCurrency = options.defaultCurrency || "USD";
     this.orders = new PayPalOrders(this);
     this.baseUrl = getModeURL(options.mode);
+
+    setGlobalOrigin(this.baseUrl);
   }
 
   async getToken() {
@@ -106,9 +107,11 @@ export class PayPalClient {
     };
   }
 
-  _headers<T extends Record<string, any>>(
-    extra: T
-  ) {
+  _headers<T extends Record<string, any>>(extra: T) {
     return Object.assign(this._defaultHeaders(), extra);
+  }
+
+  _fetch(endpoint: keyof typeof Endpoints, init?: RequestInit) {
+    return fetch(Endpoints[endpoint], init);
   }
 }
