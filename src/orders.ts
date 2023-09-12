@@ -1,8 +1,13 @@
-import { fetch } from "undici";
-import { Endpoints, Intent } from "./constants";
+import { Intent, PaymentStatus } from "./constants";
 import PayPalError from "./error";
-import { PayPalClient, PayPalOrderLink, PayPalOrderOptions } from "./paypal";
-import { buildUrl, circularJSONResolver } from "./utils";
+import {
+  PayPalClient,
+  PayPalOrderLink,
+  PayPalOrderOptions,
+  PayPalPayer,
+  PayPalPurchaseUnit,
+} from "./paypal";
+import { camelCase, circularJSONResolver, snake_case } from "./utils";
 
 // TODO: Implement all props
 export interface PayPalOrderResponse {
@@ -18,6 +23,31 @@ export interface PayPalOrderResponse {
    * The intent to either capture payment immediately or authorize a payment for an order after order creation.
    */
   intent?: Intent;
+  /**
+   * The date and time when the transaction occurred, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
+   */
+  createTime?: string;
+  /**
+   * The date and time when the transaction was last updated, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
+   */
+  updateTime?: string;
+  /**
+   * The instruction to process an order.
+   * @default "NO_INSTRUCTION"
+   */
+  processingInstruction?: ProcessingInstruction;
+  /**
+   * An array of purchase units. Each purchase unit establishes a contract between a customer and merchant. Each purchase unit represents either a full or partial order that the customer intends to purchase from the merchant.
+   */
+  purchaseUnits?: PayPalPurchaseUnit[];
+  /**
+   * The order status.
+   */
+  status?: PaymentStatus;
+  /**
+   * The customer who approves and pays for the order. The customer is also known as the payer.
+   */
+  payer?: PayPalPayer;
 }
 
 export class PayPalOrders {
@@ -27,16 +57,13 @@ export class PayPalOrders {
   }
 
   async create(data: PayPalOrderOptions): Promise<PayPalOrderResponse> {
-    const res = await fetch(
-      buildUrl(this.paypal.baseUrl, Endpoints.ORDER_CHECKOUT),
-      {
-        method: "POST",
-        body: JSON.stringify(circularJSONResolver(data)),
-        headers: this.paypal._headers({
-          "Content-Type": "application/json",
-        }),
-      }
-    );
+    const res = await this.paypal._fetch("ORDER_CHECKOUT", {
+      method: "POST",
+      body: JSON.stringify(circularJSONResolver(data, snake_case)),
+      headers: this.paypal._headers({
+        "Content-Type": "application/json",
+      }),
+    });
 
     const json = (await res.json()) as Record<string, any>;
 
@@ -44,7 +71,7 @@ export class PayPalOrders {
       throw new PayPalError(json.name, json.message);
     }
 
-    return json;
+    return circularJSONResolver(json, camelCase);
   }
 
   view() {}
