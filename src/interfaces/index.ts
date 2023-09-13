@@ -12,6 +12,7 @@ import type {
   PaymentDataType,
   PaymentInitiator,
   PaymentMethodPreference,
+  PaymentStatus,
   PaymentTokenType,
   PaymentType,
   PaymentUsage,
@@ -20,6 +21,7 @@ import type {
   ShippingPreference,
   StoreInVault,
   TaxIdType,
+  UpdateOPCodes,
   UserAction,
 } from "../constants";
 
@@ -28,6 +30,14 @@ export interface PayPalOptions {
   clientSecret: string;
   mode: Mode;
 }
+
+export type FunctionArgs<T> = T extends (...args: infer Args) => any
+  ? Args
+  : never;
+
+export type Json = {
+  [x: string]: any;
+};
 
 /**
  * A string with a number inside
@@ -910,4 +920,67 @@ export interface PayPalOrderLink {
    * The HTTP method required to make the related call.
    */
   method?: RequestMethod;
+}
+
+export interface PayPalOrderResponse {
+  /**
+   * The Id of the order.
+   */
+  id?: string;
+  /**
+   * An array of request-related HATEOAS links. To complete payer approval, use the `approve` link to redirect the payer. The API caller has 3 hours (default setting, this which can be changed by your account manager to 24/48/72 hours to accommodate your use case) from the time the order is created, to redirect your payer. Once redirected, the API caller has 3 hours for the payer to approve the order and either authorize or capture the order. If you are not using the PayPal JavaScript SDK to initiate PayPal Checkout (in context) ensure that you include `applicationContext.returnUrl` is specified or you will get "We're sorry, Things don't appear to be working at the moment" after the payer approves the payment.
+   */
+  links?: PayPalOrderLink[];
+  /**
+   * The intent to either capture payment immediately or authorize a payment for an order after order creation.
+   */
+  intent?: Intent;
+  /**
+   * The date and time when the transaction occurred, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
+   */
+  createTime?: string;
+  /**
+   * The date and time when the transaction was last updated, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
+   */
+  updateTime?: string;
+  /**
+   * The instruction to process an order.
+   * @default "NO_INSTRUCTION"
+   */
+  processingInstruction?: ProcessingInstruction;
+  /**
+   * An array of purchase units. Each purchase unit establishes a contract between a customer and merchant. Each purchase unit represents either a full or partial order that the customer intends to purchase from the merchant.
+   */
+  purchaseUnits?: PayPalPurchaseUnit[];
+  /**
+   * The order status.
+   */
+  status?: PaymentStatus;
+  /**
+   * The customer who approves and pays for the order. The customer is also known as the payer.
+   */
+  payer?: PayPalPayer;
+  /**
+   * The payment source used to fund the payment.
+   */
+  paymentSource?: PaymentSource;
+}
+
+export interface PayPalOrderUpdate {
+  /**
+   * The operation
+   */
+  op: UpdateOPCodes;
+  /**
+   * The [JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) to the target document location at which to complete the operation.
+   */
+  path?: string;
+  /**
+   * The value to apply. The `remove`, `copy`, and `move` operations do not require a value. Since [JSON Patch](https://www.rfc-editor.org/rfc/rfc69021) allows any type for `value`,, the `type` property is not specified.
+   */
+  value?: any;
+  /**
+   * The [JSON Pointer](https://datatracker.ietf.org/doc/html/rfc6901) to the target document location from which to move the value. Required for the move operation.
+   */
+  from?: string;
 }
