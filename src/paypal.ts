@@ -1,8 +1,8 @@
-import { RequestInit, fetch, setGlobalOrigin } from "undici";
+import { RequestInit, Response, fetch, setGlobalOrigin } from "undici";
 import * as Constants from "./constants";
 import { Endpoints } from "./constants";
 import PayPalError from "./error";
-import { PayPalOptions } from "./interfaces";
+import { FunctionArgs, PayPalOptions } from "./interfaces";
 import { PayPalOrders } from "./orders";
 
 export * from "./interfaces";
@@ -13,6 +13,18 @@ interface PayPalPrivate {
   mode: Constants.Mode;
   token: string | null;
 }
+
+type _EndpointFunctionsKeys = {
+  [K in keyof typeof Endpoints]: (typeof Endpoints)[K] extends Function
+    ? (typeof Endpoints)[K]
+    : never;
+};
+
+type EndpointFunctionsKeys = {
+  [K in keyof _EndpointFunctionsKeys as _EndpointFunctionsKeys[K] extends never
+    ? never
+    : K]: _EndpointFunctionsKeys[K];
+};
 
 const PAYPAL_PRIVATE = Symbol("private");
 
@@ -111,7 +123,30 @@ export class PayPalClient {
     return Object.assign(this._defaultHeaders(), extra);
   }
 
-  _fetch(endpoint: keyof typeof Endpoints, init?: RequestInit) {
-    return fetch(Endpoints[endpoint], init);
+  _fetch(
+    endpoint: Exclude<keyof typeof Endpoints, keyof EndpointFunctionsKeys>,
+    init?: RequestInit
+  ): Promise<Response>;
+  _fetch<T extends keyof EndpointFunctionsKeys>(
+    endpoint: T,
+    init?: RequestInit,
+    ...extra: FunctionArgs<(typeof Endpoints)[T]>
+  ): Promise<Response>;
+  _fetch(
+    endpoint: keyof typeof Endpoints,
+    init?: RequestInit,
+    ...extra: any[]
+  ) {
+    let route: string;
+
+    if (typeof Endpoints[endpoint] === "function") {
+      route = (
+        Endpoints[endpoint] as (typeof Endpoints)[keyof EndpointFunctionsKeys]
+      ).apply(null, extra);
+    } else {
+      route = Endpoints[endpoint] as string;
+    }
+
+    return fetch(route, init);
   }
 }
