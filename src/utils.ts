@@ -1,3 +1,5 @@
+import { Json } from "./interfaces";
+
 export function snake_case(name: string) {
   return name.replaceAll(/[A-Z-1-9]/g, (letter) => `_${letter.toLowerCase()}`);
 }
@@ -6,6 +8,27 @@ export function camelCase(name: string) {
   return name.replaceAll(/([-_][a-z])/g, (letter) =>
     letter.toUpperCase().replace("-", "").replace("_", "")
   );
+}
+
+export function impl(c: any, data: Json) {
+  for (const key of Object.keys(c).filter((key) => !key.startsWith("_"))) {
+    let value = data[snake_case(key)];
+
+    if (Array.isArray(value)) {
+      const newValue: {}[] = [];
+      for (const item of value) {
+        newValue.push(circularJSONResolver(item, camelCase));
+      }
+
+      value = newValue;
+    } else if (typeof value === "object") {
+      value = circularJSONResolver(value, camelCase);
+    }
+
+    if (value) {
+      c[key] = value;
+    }
+  }
 }
 
 export function circularJSONResolver<T extends Record<string, any>>(
