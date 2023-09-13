@@ -1,57 +1,71 @@
 import { Intent, PaymentStatus, RequestMethod } from "./constants";
 import PayPalError from "./error";
 import {
+  PayPalOrderResponse as IPayPalOrderResponse,
+  Json,
   PayPalClient,
   PayPalOrderLink,
   PayPalOrderOptions,
+  PayPalOrderUpdate,
   PayPalPayer,
   PayPalPurchaseUnit,
   PaymentSource,
 } from "./paypal";
-import { camelCase, circularJSONResolver, snake_case } from "./utils";
+import { camelCase, circularJSONResolver, impl, snake_case } from "./utils";
 
-export interface PayPalOrderResponse {
-  /**
-   * The Id of the order.
-   */
+export class PayPalOrderResponse implements IPayPalOrderResponse {
   id?: string;
-  /**
-   * An array of request-related HATEOAS links. To complete payer approval, use the `approve` link to redirect the payer. The API caller has 3 hours (default setting, this which can be changed by your account manager to 24/48/72 hours to accommodate your use case) from the time the order is created, to redirect your payer. Once redirected, the API caller has 3 hours for the payer to approve the order and either authorize or capture the order. If you are not using the PayPal JavaScript SDK to initiate PayPal Checkout (in context) ensure that you include `applicationContext.returnUrl` is specified or you will get "We're sorry, Things don't appear to be working at the moment" after the payer approves the payment.
-   */
   links?: PayPalOrderLink[];
-  /**
-   * The intent to either capture payment immediately or authorize a payment for an order after order creation.
-   */
   intent?: Intent;
-  /**
-   * The date and time when the transaction occurred, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
-   */
   createTime?: string;
-  /**
-   * The date and time when the transaction was last updated, in [Internet date and time format](https://datatracker.ietf.org/doc/html/rfc3339#section-5.6).
-   */
   updateTime?: string;
-  /**
-   * The instruction to process an order.
-   * @default "NO_INSTRUCTION"
-   */
   processingInstruction?: ProcessingInstruction;
-  /**
-   * An array of purchase units. Each purchase unit establishes a contract between a customer and merchant. Each purchase unit represents either a full or partial order that the customer intends to purchase from the merchant.
-   */
   purchaseUnits?: PayPalPurchaseUnit[];
-  /**
-   * The order status.
-   */
   status?: PaymentStatus;
-  /**
-   * The customer who approves and pays for the order. The customer is also known as the payer.
-   */
   payer?: PayPalPayer;
-  /**
-   * The payment source used to fund the payment.
-   */
   paymentSource?: PaymentSource;
+  private _data: Json;
+
+  constructor(private readonly paypal: PayPalClient, data: Json) {
+    this._data = data;
+    this.#impl();
+  }
+
+  #impl() {
+    impl(this, this._data);
+
+    return this;
+  }
+
+  async review() {
+    if (!this.id) {
+      throw new PayPalError(
+        "CANNOT_REVIEW",
+        "It will not be possible to review the data for this order because the id is missing"
+      );
+    }
+
+    this._data = await this.paypal.orders._view(this.id);
+
+    return this.#impl();
+  }
+
+  async update(data: PayPalOrderUpdate[]) {
+    if (!this.id) {
+      throw new PayPalError(
+        "CANNOT_UPDATE",
+        "It will not be possible to update this order because the id is missing"
+      );
+    }
+
+    await this.paypal.orders.update(this.id, data);
+
+    return this.review();
+  }
+
+  toJSON(): IPayPalOrderResponse {
+    return circularJSONResolver(this._data, camelCase);
+  }
 }
 
 export class PayPalOrders {
@@ -69,14 +83,60 @@ export class PayPalOrders {
       }),
     });
 
-    const json = (await res.json()) as Record<string, any>;
+    const json = (await res.json()) as Json;
 
     if (!res.ok) {
       throw new PayPalError(json.name, json.message);
     }
 
-    return circularJSONResolver(json, camelCase);
+    return new PayPalOrderResponse(this.paypal, json);
   }
 
-  view() {}
+  /**
+   * @private
+   */
+  async _view(orderId: string) {
+    const res = await this.paypal._fetch(
+      "ORDER_DETAILS",
+      {
+        method: RequestMethod.GET,
+        headers: this.paypal._headers({
+          "Content-Type": "application/json",
+        }),
+      },
+      orderId
+    );
+
+    const json = (await res.json()) as Json;
+
+    if (!res.ok) {
+      throw new PayPalError(json.name, json.message);
+    }
+
+    return json;
+  }
+
+  async view(orderId: string) {
+    return new PayPalOrderResponse(this.paypal, await this._view(orderId));
+  }
+
+  async update(orderId: string, data: PayPalOrderUpdate[]) {
+    const res = await this.paypal._fetch(
+      "ORDER_DETAILS",
+      {
+        method: RequestMethod.PATCH,
+        body: JSON.stringify(data),
+        headers: this.paypal._headers({
+          "Content-Type": "application/json",
+        }),
+      },
+      orderId
+    );
+
+    if (!res.ok) {
+      const json = (await res.json()) as Json;
+
+      throw new PayPalError(json.name, json.message);
+    }
+  }
 }
