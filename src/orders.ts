@@ -1,4 +1,4 @@
-import { Intent, PaymentStatus } from "./constants";
+import { Intent, PaymentStatus, RequestMethod } from "./constants";
 import PayPalError from "./error";
 import {
   PayPalClient,
@@ -6,10 +6,10 @@ import {
   PayPalOrderOptions,
   PayPalPayer,
   PayPalPurchaseUnit,
+  PaymentSource,
 } from "./paypal";
 import { camelCase, circularJSONResolver, snake_case } from "./utils";
 
-// TODO: Implement all props
 export interface PayPalOrderResponse {
   /**
    * The Id of the order.
@@ -48,6 +48,10 @@ export interface PayPalOrderResponse {
    * The customer who approves and pays for the order. The customer is also known as the payer.
    */
   payer?: PayPalPayer;
+  /**
+   * The payment source used to fund the payment.
+   */
+  paymentSource?: PaymentSource;
 }
 
 export class PayPalOrders {
@@ -58,7 +62,7 @@ export class PayPalOrders {
 
   async create(data: PayPalOrderOptions): Promise<PayPalOrderResponse> {
     const res = await this.paypal._fetch("ORDER_CHECKOUT", {
-      method: "POST",
+      method: RequestMethod.POST,
       body: JSON.stringify(circularJSONResolver(data, snake_case)),
       headers: this.paypal._headers({
         "Content-Type": "application/json",

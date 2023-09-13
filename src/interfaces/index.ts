@@ -1,18 +1,26 @@
 import type {
   CardNetworks,
   Currencies,
+  CustomerType,
   DisbursementMode,
   ECIFlags,
   Intent,
   ItemCategory,
+  LandingPage,
   Mode,
   PayPalShippingType,
+  PaymentDataType,
   PaymentInitiator,
+  PaymentMethodPreference,
+  PaymentTokenType,
   PaymentType,
   PaymentUsage,
   PhoneType,
   RequestMethod,
+  ShippingPreference,
   StoreInVault,
+  TaxIdType,
+  UserAction,
 } from "../constants";
 
 export interface PayPalOptions {
@@ -367,6 +375,28 @@ export interface PayPalVault {
    * Defines how and when the payment source gets vaulted.
    */
   storeInVault?: StoreInVault;
+  /**
+   * The description displayed to PayPal consumer on the approval flow for PayPal, as well as on the PayPal payment token management experience on PayPal.com.
+   */
+  description?: string;
+  /**
+   * Expected business/pricing model for the billing agreement.
+   */
+  usagePattern?: string;
+  /**
+   * The usage type associated with the PayPal payment token.
+   */
+  usageType: string;
+  /**
+   * The customer type associated with the PayPal payment token. This is to indicate whether the customer acting on the merchant / platform is either a business or a consumer.
+   * @default "CONSUMER"
+   */
+  customerType?: CustomerType;
+  /**
+   * Create multiple payment tokens for the same payer, merchant/platform combination. Use this when the customer has not logged in at merchant/platform. The payment token thus generated, can then also be used to create the customer account at merchant/platform. Use this also when multiple payment tokens are required for the same payer, different customer at merchant/platform. This helps to identify customers distinctly even though they may share the same PayPal account. This only applies to PayPal payment source.
+   * @default false
+   */
+  permitMultiplePaymentTokens?: boolean;
 }
 
 export interface PaymentCardAttributes {
@@ -377,7 +407,7 @@ export interface PaymentCardAttributes {
   /**
    * Instruction to vault the card based on the specified strategy.
    */
-  vault?: PayPalVault;
+  vault?: Pick<PayPalVault, "storeInVault">;
 }
 
 export interface PreviousNetworkTransactionReference {
@@ -488,14 +518,366 @@ export interface PaymentCard {
   networkToken?: ThreePartyNetwork;
 }
 
-export interface PayPalPayer {}
-
-// TODO: Implement all props: https://developer.paypal.com/docs/api/orders/v2/#orders_create!path=payment_source/token&t=request
-export interface PaymentSource {
-  card?: PaymentCard;
+export interface PaymentSourceToken {
+  /**
+   * The PayPal-generated ID for the token.
+   */
+  id: string;
+  /**
+   * The tokenization method that generated the ID.
+   */
+  type: PaymentTokenType;
 }
 
-// TODO: Implement all props
+export interface PaymentSourcePayPalExperienceContext {
+  /**
+   * The label that overrides the business name in the PayPal account on the PayPal site. The pattern is defined by an external party and supports Unicode.
+   */
+  brandName?: string;
+  /**
+   * The location from which the shipping address is derived.
+   * @default "GET_FROM_FILE"
+   */
+  shippingPreference?: ShippingPreference;
+  /**
+   * The type of landing page to show on the PayPal site for customer checkout.
+   * @default "NO_PREFERENCE"
+   */
+  landingPage?: LandingPage;
+  /**
+   * Configures a **Continue** or **Pay Now** checkout flow.
+   * @default "CONTINUE"
+   */
+  userAction?: UserAction;
+  /**
+   * The merchant-preferred payment methods.
+   * @default "UNRESTRICTED"
+   */
+  paymentMethodPreference?: PaymentMethodPreference;
+  /**
+   * The BCP 47-formatted locale of pages that the PayPal payment experience shows. PayPal supports a five-character code.
+   */
+  locale?: string;
+  /**
+   * The URL where the customer is redirected after the customer approves the payment.
+   */
+  returnUrl?: string;
+  /**
+   * The URL where the customer is redirected after the customer cancels the payment.
+   */
+  cancelUrl?: string;
+}
+
+/**
+ * The tax information of the PayPal account holder. Required only for Brazilian PayPal account holder's. Both `taxId` and `taxIdType` are required.
+ */
+export interface PayPalTaxInfo {
+  /**
+   * The customer's tax ID value.
+   */
+  taxId: string;
+  /**
+   * The customer's tax ID type.
+   */
+  taxIdType: TaxIdType;
+}
+
+export interface PaymentSourceAttributes {
+  /**
+   * The details about a customer in PayPal's system of record.
+   */
+  customer?: Pick<PayPalCustomer, "id">;
+  /**
+   * Attributes used to provide the instructions during vaulting of the PayPal Wallet.
+   */
+  vault?: PayPalVault;
+}
+
+export interface PaymentSourcePayPal {
+  /**
+   * Customizes the payer experience during the approval process for payment with PayPal.
+   */
+  experienceContext?: PaymentSourcePayPalExperienceContext;
+  /**
+   * The PayPal billing agreement ID. References an approved recurring payment for goods or services.
+   */
+  billingAgreementId?: string;
+  /**
+   * The PayPal-generated ID for the `paymentSource` stored within the Vault.
+   */
+  vaultId?: string;
+  /**
+   * The PayPal-generated ID for the `paymentSource` stored within the Vault.
+   */
+  emailAddress?: string;
+  /**
+   * The name of the PayPal account holder. Supports only the **givenName** and **surname** properties.
+   */
+  name?: PayPalName;
+  /**
+   * The phone number of the customer. Available only when you enable the **Contact Telephone Number** option in the [Profile & Settings](https://www.paypal.com/cgi-bin/customerprofileweb?cmd=_profile-website-payments&amp;_ga=2.2236598.702995990.1694442505-1664691600.1693059333) for the merchant's PayPal account. The **phone.phoneNumber** supports only **nationalNumber**.
+   */
+  phone?: PayPalPhone;
+  /**
+   * The birth date of the PayPal account holder in `YYYY-MM-DD` format.
+   */
+  birthDate?: string;
+  /**
+   * The tax information of the PayPal account holder. Required only for Brazilian PayPal account holder's. Both `taxId` and `taxIdType` are required.
+   */
+  taxInfo?: PayPalTaxInfo;
+  /**
+   * The address of the PayPal account holder. Supports only the `addressLine1`, `addressLine2`, `adminArea1`, `adminArea2`, `postalCode`, and `countryCode` properties.
+   */
+  address?: PayPalAddress;
+  /**
+   * Additional attributes associated with the use of this wallet.
+   */
+  attributes?: PaymentSourceAttributes;
+}
+
+export interface PayPalPayer
+  extends Omit<
+    PaymentSourcePayPal,
+    "attributes" | "experienceContext" | "vaultId" | "billingAgreementId"
+  > {
+  /**
+   * The PayPal-assigned ID for the payer.
+   */
+  payerId?: string;
+}
+
+export interface BasePaymentBankMethod {
+  /**
+   * The name of the account holder associated with this payment method.
+   */
+  name: string;
+  /**
+   * The two-character ISO 3166-1 country code.
+   */
+  countryCode: string;
+  /**
+   * Customizes the payer experience during the approval process for the payment.
+   */
+  experienceContext?: PaymentSourcePayPalExperienceContext;
+}
+
+export interface Bancontact extends BasePaymentBankMethod {}
+
+export interface Blik extends BasePaymentBankMethod {
+  /**
+   * The email address of the account holder associated with this payment method.
+   */
+  email?: string;
+}
+
+export interface EPS extends BasePaymentBankMethod {}
+
+export interface GiroPay extends BasePaymentBankMethod {}
+
+export interface iDEAL extends BasePaymentBankMethod {
+  /**
+   * The bank identification code (BIC).
+   */
+  bic?: string;
+}
+
+export interface MyBank extends BasePaymentBankMethod {}
+
+export interface P24 extends BasePaymentBankMethod {
+  /**
+   * The email address of the account holder associated with this payment method.
+   */
+  email: string;
+}
+
+export interface SOFORT extends BasePaymentBankMethod {}
+
+export interface Trustly extends BasePaymentBankMethod {}
+
+export interface ApplePayPaymentData {
+  /**
+   * Online payment cryptogram, as defined by 3D Secure. The pattern is defined by an external party and supports Unicode.
+   */
+  cryptogram?: string;
+  /**
+   * ECI indicator, as defined by 3- Secure. The pattern is defined by an external party and supports Unicode.
+   */
+  eciIndicator?: string;
+  /**
+   * Encoded Apple Pay EMV Payment Structure used for payments in China. The pattern is defined by an external party and supports Unicode.
+   */
+  emvData?: string;
+  /**
+   * Bank Key encrypted Apple Pay PIN. The pattern is defined by an external party and supports Unicode.
+   */
+  pin?: string;
+}
+
+export interface DecryptedToken {
+  /**
+   * Apple Pay Hex-encoded device manufacturer identifier. The pattern is defined by an external party and supports Unicode.
+   */
+  deviceManufacturerId?: string;
+  /**
+   * Indicates the type of payment data passed, in case of Non China the payment data is 3DSECURE and for China it is EMV.
+   */
+  paymentDataType?: PaymentDataType;
+  /**
+   * The transaction amount for the payment that the payer has approved on apple platform.
+   */
+  transactionAmount?: PayPalPurchaseValue;
+  /**
+   * Apple Pay tokenized credit card used to pay.
+   */
+  tokenizedCard: Omit<
+    PaymentCard,
+    "storedCredential" | "vaultId" | "networkToken"
+  >;
+  /**
+   * Apple Pay payment data object which contains the cryptogram, eci_indicator and other data.
+   */
+  paymentData?: ApplePayPaymentData;
+}
+
+export interface ApplePay {
+  /**
+   * ApplePay transaction identifier, this will be the unique identifier for this transaction provided by Apple. The pattern is defined by an external party and supports Unicode.
+   */
+  id?: string;
+  /**
+   * Provides additional details to process a payment using a `card` that has been stored or is intended to be stored (also referred to as stored_credential or card-on-file).
+   *
+   * Parameter compatibility:
+   *
+   * - `paymentType=ONE_TIME` is compatible only with `paymentInitiator=CUSTOMER`.
+   * - `usage=FIRST` is compatible only with `paymentInitiator=CUSTOMER`.
+   * - `previousTransactionReference` or `previousNetworkTransactionReference` is compatible only with `paymentInitiator=MERCHANT`.
+   * - Only one of the parameters - `previousTransactionReference` and `previousNetworkTransactionReference` - can be present in the request.
+   */
+  storedCredential?: PayPalStoredCredential;
+  /**
+   * Name on the account holder associated with apple pay.
+   */
+  name?: string;
+  /**
+   * The email address of the account holder associated with apple pay.
+   */
+  emailAddress?: string;
+  /**
+   * The phone number, in its canonical international [E.164 numbering plan format](https://www.itu.int/rec/T-REC-E.164/en). Supports only the `nationalNumber` property.
+   */
+  phoneNumber?: PayPalPhoneNumber;
+  /**
+   * The PayPal-generated ID for the saved apple pay paymentSource. This ID should be stored on the merchant's server so the saved payment source can be used for future transactions.
+   */
+  vaultId?: string;
+  /**
+   * The decrypted payload details for the apple pay token.
+   */
+  decryptedToken?: PaymentSourceToken;
+}
+
+export interface VenmoAttributes {
+  /**
+   * The details about a customer in PayPal's system of record.
+   */
+  customer?: Pick<PayPalCustomer, "id">;
+  /**
+   * Attributes used to provide the instructions during vaulting of the Venmo Wallet.
+   */
+  vault?: PayPalVault;
+}
+
+export interface Venmo
+  extends Pick<BasePaymentBankMethod, "experienceContext"> {
+  /**
+   * The PayPal-generated ID for the saved Venmo wallet paymentSource. This ID should be stored on the merchant's server so the saved payment source can be used for future transactions.
+   */
+  vaultId?: string;
+  /**
+   * The email address of the payer.
+   */
+  emailAddress?: string;
+  attributes?: VenmoAttributes;
+}
+
+export interface PaymentSource {
+  /**
+   * The payment card to use to fund a payment. Can be a credit or debit card.
+   */
+  card?: PaymentCard;
+  /**
+   * The tokenized payment source to fund a payment.
+   */
+  token?: PaymentSourceToken;
+  /**
+   * Indicates that PayPal Wallet is the payment source. Main use of this selection is to provide additional instructions associated with this choice like vaulting.
+   */
+  paypal?: PaymentSourcePayPal;
+  /**
+   * Bancontact is the most popular online payment in Belgium. [More Details](https://www.bancontact.com).
+   */
+  bancontact?: Bancontact;
+  /**
+   * BLIK is a mobile payment system, created by Polish Payment Standard in order to allow millions of users to pay in shops, payout cash in ATMs and make online purchases and payments. [More Details](https://blikmobile.pl).
+   */
+  blik?: Blik;
+  /**
+   * The eps transfer is an online payment method developed by many Austrian banks. [More Details](https://www.eps-ueberweisung.at).
+   */
+  eps?: EPS;
+  /**
+   * Giropay is an Internet payment System in Germany, based on online banking. [More Details](https://giropay.de).
+   */
+  giropay?: GiroPay;
+  /**
+   * The Dutch payment method iDEAL is an online payment method that enables consumers to pay online through their own bank. [More Details](https://www.ideal.nl).
+   */
+  ideal?: iDEAL;
+  /**
+   * MyBank is an e-authorisation solution which enables safe digital payments and identity authentication through a consumer’s own online banking portal or mobile application. [More Details](https://www.mybank.eu).
+   */
+  mybank?: MyBank;
+  /**
+   * P24 (Przelewy24) is a secure and fast online bank transfer service linked to all the major banks in Poland. [More Details](https://www.przelewy24.pl).
+   */
+  p24?: P24;
+  /**
+   * SOFORT Banking is a real-time bank transfer payment method that buyers use to transfer funds directly to merchants from their bank accounts. [More Details](https://www.klarna.com/sofort/).
+   */
+  sofort?: SOFORT;
+  /**
+   * Trustly is a payment method that allows customers to shop and pay from their bank account. [More Details](https://www.trustly.net).
+   */
+  trustly?: Trustly;
+  /**
+   * ApplePay payment source, allows buyer to pay using ApplePay, both on Web as well as on Native.
+   */
+  apple_pay?: ApplePay;
+  /**
+   * Information needed to indicate that Venmo is being used to fund the payment.
+   */
+  venmo?: Venmo;
+}
+
+export interface StoredPaymentSource extends PayPalStoredCredential {}
+
+export interface PayPalOrderApplicationContext
+  extends PaymentSourcePayPalExperienceContext {
+  /**
+   * Provides additional details to process a payment using a `paymentSource` that has been stored or is intended to be stored (also referred to as storedCredential or card-on-file).
+   *
+   * Parameter compatibility:
+   *
+   * - `paymentType=ONE_TIME` is compatible only with `paymentInitiator=CUSTOMER`.
+   * - `usage=FIRST` is compatible only with `paymentInitiator=CUSTOMER`.
+   * - `previousTransactionReference` or `previousNetworkTransactionReference` is compatible only with `paymentInitiator=MERCHANT`.
+   * - Only one of the parameters - `previousTransactionReference` and `previousNetworkTransactionReference` - can be present in the request.
+   */
+  storedPaymentSource?: StoredPaymentSource;
+}
+
 export interface PayPalOrderOptions {
   /**
    * The intent to either capture payment immediately or authorize a payment for an order after order creation.
@@ -505,6 +887,14 @@ export interface PayPalOrderOptions {
    * An array of purchase units. Each purchase unit establishes a contract between a payer and the payee. Each purchase unit represents either a full or partial order that the payer intends to purchase from the payee.
    */
   purchaseUnits: PayPalPurchaseUnit[];
+  /**
+   * The payment source definition.
+   */
+  paymentSource?: PaymentSource;
+  /**
+   * Customize the payer experience during the approval process for the payment with PayPal.
+   */
+  applicationContext?: PayPalOrderApplicationContext;
 }
 
 export interface PayPalOrderLink {
