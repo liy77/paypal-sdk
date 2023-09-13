@@ -197,6 +197,111 @@ export enum ECIFlags {
   NON_3D_SECURE_TRANSACTION = "NON_3D_SECURE_TRANSACTION",
 }
 
+export enum PaymentTokenType {
+  /**
+   * The PayPal billing agreement ID. References an approved recurring payment for goods or services.
+   */
+  BILLING_AGREEMENT = "BILLING_AGREEMENT",
+}
+
+export enum ShippingPreference {
+  /**
+   * Get the customer-provided shipping address on the PayPal site.
+   */
+  GET_FROM_FILE = "GET_FROM_FILE",
+  /**
+   * Redacts the shipping address from the PayPal site. Recommended for digital goods.
+   */
+  NO_SHIPPING = "NO_SHIPPING",
+  /**
+   * Get the merchant-provided address. The customer cannot change this address on the PayPal site. If merchant does not pass an address, customer can choose the address on PayPal pages.
+   */
+  SET_PROVIDED_ADDRESS = "SET_PROVIDED_ADDRESS",
+}
+
+export enum LandingPage {
+  /**
+   * When the customer clicks **PayPal Checkout**, the customer is redirected to a page to log in to PayPal and approve the payment.
+   */
+  LOGIN = "LOGIN",
+  /**
+   * When the customer clicks **PayPal Checkout**, the customer is redirected to a page to enter credit or debit card and other relevant billing information required to complete the purchase. This option has previously been also called as 'BILLING'
+   */
+  GUEST_CHECKOUT = "GUEST_CHECKOUT",
+  /**
+   * When the customer clicks **PayPal Checkout**, the customer is redirected to either a page to log in to PayPal and approve the payment or to a page to enter credit or debit card and other relevant billing information required to complete the purchase, depending on their previous interaction with PayPal.
+   */
+  NO_PREFERENCE = "NO_PREFERENCE",
+}
+
+export enum UserAction {
+  /**
+   * After you redirect the customer to the PayPal payment page, a **Continue** button appears. Use this option when the final amount is not known when the checkout flow is initiated and you want to redirect the customer to the merchant page without processing the payment.
+   */
+  CONTINUE = "CONTINUE",
+  /**
+   * After you redirect the customer to the PayPal payment page, a **Pay Now** button appears. Use this option when the final amount is known when the checkout is initiated and you want to process the payment immediately when the customer clicks **Pay Now**.
+   */
+  PAY_NOW = "PAY_NOW",
+}
+
+export enum PaymentMethodPreference {
+  /**
+   * Accepts any type of payment from the customer.
+   */
+  UNRESTRICTED = "UNRESTRICTED",
+  /**
+   * Accepts only immediate payment from the customer. For example, credit card, PayPal balance, or instant ACH. Ensures that at the time of capture, the payment does not have the pending status.
+   */
+  IMMEDIATE_PAYMENT_REQUIRED = "IMMEDIATE_PAYMENT_REQUIRED",
+}
+
+export enum TaxIdType {
+  /**
+   * The individual tax ID type, typically is 11 characters long.
+   */
+  CPF = "BR_CPF",
+  /**
+   * The business tax ID type, typically is 14 characters long.
+   */
+  CNPJ = "BR_CNPJ",
+}
+
+export enum CustomerType {
+  CONSUMER = "CONSUMER",
+  BUSINESS = "BUSINESS",
+}
+
+export enum PaymentDataType {
+  /**
+   * The card was authenticated using 3D Secure (3DS) authentication scheme. While using this value make sure to populate cryptogram and eci_indicator as part of payment data..
+   */
+  THREE_DSECURE = "3DSECURE",
+  /**
+   * The card was authenticated using EMV method, which is applicable for China. While using this value make sure to pass emv_data and pin as part of payment data.
+   */
+  EMV = "EMV",
+}
+
+export enum StandardEntryClassCode {
+  /**
+   * The API caller (merchant/partner) accepts authorization and payment information from a consumer over the telephone.
+   */
+  TEL = "TEL",
+  /**
+   * The API caller (merchant/partner) accepts Debit transactions from a consumer on their website.
+   */
+  WEB = "WEB",
+  /**
+   * Cash concentration and disbursement for corporate debit transaction. Used to disburse or consolidate funds. Entries are usually Optional high-dollar, low-volume, and time-critical. (e.g. intra-company transfers or invoice payments to suppliers).
+   */
+  CCD = "CCD",
+  /**
+   * Prearranged payment and deposit entries. Used for debit payments authorized by a consumer account holder, and usually initiated by a company. These are usually recurring debits (such as insurance premiums).
+   */
+  PPD = "PPD",
+}
+
 export namespace Endpoints {
   export const ORDER_CHECKOUT = "checkout/orders";
 }
